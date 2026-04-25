@@ -1,0 +1,27 @@
+---
+layout: default
+title: Home
+---
+<br/>
+<div class="flexbox100">
+<picture>
+	<img alt="Picture of Bridge" src="/assets/images/TillicumCrossing500T.png">
+</picture>
+<div class="plainbox350">
+	<p>A stone age engineer taking the time to learn the linux ... and making notes.</p>
+	<p>Articles about Raspberry Pi, Linux, C/C++ programming and Digital Signal Processing.  Installations, tools and projects.</p>
+	<p><i>This is not expert or professional advice - it is provided for educational purposes only.  Always back up your files before installing anything.  Always understand why you're doing something.  Always understand what you're doing.  Do anything you want with this.  If this breaks something, it's your responsibility.</i></p>
+</div>
+</div>
+<br/>
+<br/>
+<h2>Raspberry Pi Articles:</h2>
+<ul>
+	{% for post in site.posts %}
+		<li>
+			<h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+			{{ post.excerpt }}
+			<hr width="100%" size="2" color="black">
+		</li>
+	{% endfor %}
+</ul>

@@ -1,0 +1,746 @@
+---
+layout: post
+title: "RPi C++ Text and Objects With SDL3"
+author: mike
+excerpt_separator: <!--more-->
+#published: false
+---
+
+The first part of this series on the Simple DirectMedia Layer (SDL3) covered <a href="{% post_url 2026-01-03-Rpi-C++-SDL3-Getting-Started %}" style="color: blue">getting started</a> by loading the library and building a basic C++ program to display an empty graphics window, the 2nd part introduced <a href="{% post_url 2026-01-04-Rpi-C++-SDL3-Drawing-Primitives %}" style="color: blue">2D drawing primitives</a>, and the third part introduced <a href="{% post_url 2026-01-05-Rpi-C++-SDL3-Event-Basics %}" style="color: blue">basic event handling</a>.  In this article, we'll look at drawing text and starting to use basic C++ classes to handle common control panel objects.
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics5.png" alt="graphics window with true type text debug text and a button" width="500" />
+<!--more-->
+<br/> <br/> <br/>
+*The usual disclaimer:  This is not expert or professional advice - it is provided for educational purposes only.  Always back up your files before installing anything.  Always understand why you're doing something.  Always understand what you're doing.  If this breaks something, it's your responsibility.*
+<br/><br/>
+
+
+The SDL3 library has several other <a href="https://wiki.libsdl.org/SDL3/Libraries" style="color: blue">associated libraries</a> that extend it's functionality with images, audio, networking and gui's.  In this article, we'll use the <a href="https://wiki.libsdl.org/SDL3_ttf/FrontPage" style="color: blue">SDL_ttf Library</a>, which wraps the FreeType and Harfbuzz libraries so that TrueType fonts can be rendered in your graphics windows.  Be aware that licensing and copyright of fonts prevents the distribution of most commercial fonts - we'll use fonts already installed on your computer for these examples.
+<br/><br/>
+
+
+
+
+### TrueType Text
+
+
+First, install/update the SDL3 TrueType Font library from the Raspberry Pi repository:
+
+<pre class="monoHighlight">
+    sudo apt update
+    sudo apt install libsdl3-ttf-dev
+    sudo ldconfig
+</pre>
+<br/>
+
+
+
+We'll just use a single text file created in any plain text editor for the source code and compile the program from the BASH command line - this is typically only useful for very small programs or testing, but is an easy way to get started with C++ programming on the Raspberry Pi.
+
+Assuming you've made a directory to hold your test program from the Getting Started article, change to it (or make one), and use the command line to create a new file in the geany text editor to use for these text and object code examples:
+
+<pre style="font-size: 12px; font-family: monospace; color: #04b3d6;">
+    cd ~/ProjectSDL3-mainBasics
+    geany SDL3-textBasics.cpp
+</pre>
+
+
+The following code uses the final Main Loop skeleton program from the <a href="{% post_url 2026-01-03-Rpi-C++-SDL3-Getting-Started %}" style="color: blue">RPi C++ SDL3 Getting Started</a> article, and adds the changes in blue:
+<br/><br/>
+<div class="shadowbox"><pre class="monoBackground">
+#include &lt;iostream&gt;
+#include &lt;SDL3/SDL.h&gt;
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+#include &lt;SDL3_ttf/SDL_ttf.h&gt;
+// compile with:   g++ SDL3-textBasics.cpp -oSDL3-textBasics -lSDL3 -lSDL3_ttf -Wall
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+
+int main(int argc, char *argv[]) {                                              // program entry point
+    std::cout &lt;&lt; "SDL3 Library Version " &lt;&lt;                                     // Print out the library version
+                        SDL_VERSIONNUM_MAJOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MINOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MICRO(SDL_GetVersion()) &lt;&lt;
+                        std::endl;
+
+    SDL_Window *window = NULL;              SDL_Renderer *renderer = NULL;      // Window and Renderer Pointers
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    TTF_Font *fontMedium = NULL;                                                // Font pointer
+    if (!SDL_Init(SDL_INIT_VIDEO) ||                                            // Initialize the SDL3 library
+          !SDL_CreateWindowAndRenderer("SDL3 Text and Object Basics",           // Create Window with Renderer
+                               1000, 400, 0, &window, &renderer) ||
+          !TTF_Init() ||                                                        // initialize font library and open font
+          (((fontMedium = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30.f)) == NULL))) {
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        std::cout << "SDL3 Error: " << SDL_GetError() << std::endl;
+        return 1;                                                               // program exit
+    }
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    SDL_Surface* surface = TTF_RenderText_Blended(fontMedium,                   // creates surface with text
+                       (char*) "DejaVu Sans font 30p", 0,                       // the output string
+                               {255, 255, 255, 255});                           // in white
+    SDL_Texture* text1 = SDL_CreateTextureFromSurface(renderer, surface);       // make text1 texture from surface
+    SDL_DestroySurface(surface);                                                // don't need surface anymore
+    SDL_FRect text1xywh = {40.f, 100.f, 0.f, 0.f};                              // put texture at 40,100
+    SDL_GetTextureSize(text1, &text1xywh.w, &text1xywh.h);                      // get texture size back in w,h
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    bool endProgram = false;
+    uint64_t time=0, zTime=0, dTime=0, loopCntr=1;
+
+    while (!endProgram) {                                                       // Main Loop
+        SDL_Delay(50);                                                          // sleep for 50mS
+
+        if ((dTime=((time=SDL_GetTicksNS())-zTime)) > 1E9) {                    // more than one second
+            std::cout << "\rLoop Time(mS) = " << 1E-6*dTime/loopCntr
+                                  << "      " << std::flush;
+            zTime = time;
+            loopCntr = 0;
+        }
+        ++loopCntr;
+
+        SDL_SetRenderDrawColorFloat(renderer, 0.f, 0.f, 0.f, 1.f);              // black
+        SDL_RenderClear(renderer);                                              // clear window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+        SDL_RenderTexture(renderer, text1, NULL, &text1xywh);                   // text1 rendered to window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        SDL_RenderPresent(renderer);                                            // updates the screen
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event) != 0) {                                    // Event Loop
+            if (event.type == SDL_EVENT_QUIT)                                   // window was closed
+                endProgram = true;
+        }                                                                       // end of Event Loop
+    }                                                                           // end of Main Loop
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    TTF_Quit();                                                                // shut down ttf library
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    SDL_DestroyRenderer(renderer);          SDL_DestroyWindow(window);          // Shut down the library
+    SDL_Quit();
+    std::cout << std::endl;                                                     // extra CR/LF
+
+    return 0;                                                                   // program exit
+}
+</pre> </div> <br/>
+
+
+
+At the top of the module, a new include file is added for the <code>SDL3_ttf</code> library, along with a new compile command line note.   In  <code>main</code>, a new pointer of <code>TTF_Font</code> type is added, the window title is changed in the <code>SDL_CreateWindowAndRederer()</code> function call, an initialization of the TTF Library is done with the call to  <code>TTF_Init()</code> and the TrueType font file <code>dejavu/DejaVuSans.ttf</code> is loaded, being pointed to by the <code>fontMedium</code> pointer variable.
+
+The Raspberry Pi OS, as with Debian, puts it's TrueType files (*.ttf) in the <code>/usr/share/fonts/truetype</code> directory, with each font family having it's own sub-directory.  Note that if you need different sizes and styles of text rendered, you'll need to load a seperate font for each.
+
+Once a font is opened in the library, rendering a string takes the following steps:
+   - render an image of the string to a memory image called a surface
+   - copy that image to a video memory image called a texture
+   - delete the surface
+   - repeatedly render the texture to the displayed graphics window in the Main Loop
+
+If the text doesn't change, as in this example, the text creation steps can be done before the main loop to minimize the continuous processing load on your program - otherwise it will need to be re/created in the Main Loop if it changes as a result of user input, or needs to updated at a periodic rate.
+
+To render a text string to a memory image in the CPU's main memory with a loaded font, we're using the function <code>TTF_RenderText_Blended</code>, which in addition to the string to be rendered, also takes a color specified as an <code>SDL_Color</code> - in this case white.  The library has several different text renderers available for different quality levels and display types - check the 'see also' functions on the <a href="https://wiki.libsdl.org/SDL3_ttf/TTF_RenderText_Shaded" style="color: blue">TTF_RenderText_Shaded</a> page.  The <code>RenderText</code> functions create the 'surface' image of the string that is stored in the CPU's main memory and return a pointer of type <code>SDL_Surface</code> to it - in this case saved as <code>surface</code>.
+
+Once the string image is in the form of a memory surface, the fucntion <code>SDL_CreateTextureFromSurface()</code> takes it and creates a texture image in the CPU's video memory of type <code>SDL_Texture</code> called <code>text1</code> where it can be rendered to the display window with hardware acceleration.  With the texture created, the surface <code>surface</code> that was used to first render the string onto is no longer needed and is deleted - the texture is preserved for as long as it's needed to be drawn by the program onto the screen.
+
+To control placement and scaling of the <code>text1</code> texture, <code>text1xywh</code> is declared of type <code>SDL_FRect</code> which is a floating point structure with elements x,y,w,h.  The x,y variables will set the position of the <code>text1</code> texture in the graphics window, in this case 40 pixels from the left edge and 100 pixels from the top, while the w,h variables will set the pixel size of the rectangle to render into on the screen - in this case using the size of the text texture, with values from the <code>SDL_GetTextureSize()</code> function.
+
+The actual rendering of the <code>text1</code> texture to the display screen is done down in the Main Loop with the call to <code>SDL_RenderTexture()</code>.  The first two parameters specify the renderer and the source <code>text1</code> texture, while the next 2 parameters are pointers to structures of <code>SDL_FRect</code> - the first parameter is applied to the source texture and the next applied to the destination window.
+
+The function copies the source image bounded by it's rectangle that's offset with the x,y values and of size w,h to the destination rectangle located on the screen by it's x,y values, scaled into the rectangle bounded by it's w,h values.
+
+
+If either pointer is NULL, the entire source texture or destination target will be used - in this case, since the source pointer is NULL, the entire <code>text1</code> texture is used.  The destination <code>text1xywh</code> x,y values are the desired location in the output window, and the w,h values are set to the same size as the source texture, so the source is copied to the window 1:1.
+
+Copy the code into your editor, save the file, compile and run from the command line with the new filename and the additional linkage of the <code>SDL3_ttf</code> library file:
+
+<pre style="font-size: 12px; font-family: monospace; color: #04b3d6;">
+    g++ SDL3-textBasics.cpp -oSDL3-textBasics -lSDL3 -lSDL3_ttf -Wall
+    ./SDL3-textBasics
+</pre><br/>
+
+The graphics window will now have the string rendered in 30pt DejuVu Sans:
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics1.png" alt="graphics window with true type text" width="500" />
+<br/><br/>
+
+
+
+
+If the destination w,h values are different than the source w,h, the output will be scaled by their ratio - add the following code to the Main Loop, save, recompile and run:
+<br/><br/>
+
+
+
+<div class="shadowbox"><pre class="monoBackground">
+        SDL_SetRenderDrawColorFloat(renderer, 0.f, 0.f, 0.f, 1.f);             // black
+        SDL_RenderClear(renderer);                                             // clear window to draw color
+       
+        SDL_RenderTexture(renderer, text1, NULL, &text1xywh);                  // text1 rendered to window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+        SDL_FRect xywh = {40.f, 150.f, 0.75f*text1xywh.w, 0.75f*text1xywh.h};  // 3/4 size
+        SDL_RenderTexture(renderer, text1, NULL, &xywh);
+
+        xywh = {40.f, 200.f, 1.5f*text1xywh.w, 1.5f*text1xywh.h};              // 1.5 size
+        SDL_RenderTexture(renderer, text1, NULL, &xywh);
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+       
+        SDL_RenderPresent(renderer);                                           // updates the screen
+        
+</pre> </div> <br/>
+
+
+
+The output will now have additional copies of the text - one scaled up and one scaled down by the difference in the destination rectangle size - note that the smaller text will generally still look pretty sharp, but that the text that is scaled up will start to look a bit fuzzy, but both can be very usable:
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics2.png" alt="graphics window with true type text" width="500" />
+<br/><br/>
+
+
+
+
+### Make it a Class
+
+If you only need to display a string or two of text, the above will work fine, but beyond that you need to use some function calls to reduce the amount of code and to keep the code readable.  Since we're using C++, we'll create a class to handle the strings - if you're new to C++ programming, a class is a user-defined data type that not only holds it's own variables, it also carries functions with it that can nicely encapsulate everything needed to handle TrueType text string creation.  Once the class has been defined, we can create multiple instances of it - ie each string of text can be a separate object.
+
+The code below takes the previous version and instead of putting the text texture generation in the main code, it encapsulates it in the constructor of the class <code>textTTF {}</code> that's declared at the top of the file.  It includes the scale factor as a parameter in the constructor, and it handles the placement of the image slightly differently than the previous example - it always shifts the vertical placement  by half the width of the newly created image so that the result will be vertically centered about the <code>y</code> placement position rather than below it, and if the <code>centeredX</code> parameter is <code>true</code>, it also centers the image horizontally about the <code>x</code> placement, rather than to the right of it.
+
+An object created with the class keeps it's own pointer to the texture that's created, it's position, and stores the <code>Renderer</code> used to create the image so that it will be able to render the image to the destination window via it's <code>render()</code> method that will be called out of the Main Loop to transfer the text texture image to the display
+
+Down in the initialization section of <code>main()</code> before the Main Loop, the libraries and font are setup as in the previous example, and in addition, two declarations are added <code>text1</code> and <code>text2</code> of the new class type, each using the new <code>textTTF()</code> constructor to specify two different text string objects, with the second one scaled by 1.7x.
+
+Finally, down in the Main Loop, both of the new objects get rendered to the graphics window with the new <code>render()</code> method.
+<br/>
+
+
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+#include &lt;iostream&gt;
+#include &lt;SDL3/SDL.h&gt;
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+#include &lt;SDL3_ttf/SDL_ttf.h&gt;
+// compile with:   g++ SDL3-textBasics.cpp -oSDL3-textBasics -lSDL3 -lSDL3_ttf -Wall
+
+class textTTF {                                                                // True Type Font text
+public:                                                                        // class for rendering
+    SDL_Renderer *Renderer;
+    SDL_Texture* Texture;
+    SDL_FRect textXYWH;                                                        // display output x,y,w,h
+
+    textTTF (SDL_Renderer *renderer, TTF_Font* font, SDL_FPoint xy,            // constructor
+                          float scale, bool centeredX, SDL_Color color,
+                          char* tstr) {
+        Renderer = renderer;    Texture = NULL;
+
+        SDL_Surface* surface;
+        if ((surface = TTF_RenderText_Blended(font, tstr, 0, color))) {        // creates surface with text
+            if ((Texture = SDL_CreateTextureFromSurface(renderer, surface))) { // create texture from surface
+                SDL_GetTextureSize(Texture, &textXYWH.w, &textXYWH.h);         // size returned in w,h
+                textXYWH.w *= scale;       textXYWH.h *= scale;                // scale the output
+                textXYWH.y = xy.y - textXYWH.h/2.f;                            // shift by half of height
+                if (centeredX) textXYWH.x = xy.x - (textXYWH.w / 2.f);         // shift by half of width
+                else textXYWH.x = xy.x;
+            }
+            SDL_DestroySurface(surface);                                       // don't need anymore
+        }
+    }
+   
+    void render () {                                                           // render texture method
+        SDL_RenderTexture(Renderer, Texture, NULL, &textXYWH);
+    }
+
+    ~textTTF () {                                                              // object destructor
+        if (Texture != NULL) SDL_DestroyTexture(Texture);
+    }
+};
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+int main(int argc, char *argv[]) {                                              // program entry point
+    std::cout &lt;&lt; "SDL3 Library Version " &lt;&lt;                                     // Print out the library version
+                        SDL_VERSIONNUM_MAJOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MINOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MICRO(SDL_GetVersion()) &lt;&lt;
+                        std::endl;
+
+    SDL_Window *window = NULL;              SDL_Renderer *renderer = NULL;      // Window and Renderer Pointers
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    TTF_Font *fontMedium = NULL;                                                // Font pointer
+    if (!SDL_Init(SDL_INIT_VIDEO) ||                                            // Initialize the SDL3 library
+          !SDL_CreateWindowAndRenderer("SDL3 Text and Object Basics",           // Create Window with Renderer
+                               1000, 400, 0, &window, &renderer) ||
+          !TTF_Init() ||                                                        // initialize font library and open font
+          (((fontMedium = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30.f)) == NULL))) {
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        std::cout << "SDL3 Error: " << SDL_GetError() << std::endl;
+        return 1;                                                               // program exit
+    }
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    textTTF text1(renderer, fontMedium, {40.f, 95.f}, 1.f, false,              // constructor
+                      {255, 255, 255, 255}, (char*) "DejaVu Sans font 30p text1");
+    textTTF text2(renderer, fontMedium, {40.f, 150.f}, 1.7f, false,            // constructor
+                      {255, 255, 255, 255}, (char*) "2nd DejaVu Sans text2");
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    bool endProgram = false;
+    uint64_t time=0, zTime=0, dTime=0, loopCntr=1;
+
+    while (!endProgram) {                                                       // Main Loop
+        SDL_Delay(50);                                                          // sleep for 50mS
+
+        if ((dTime=((time=SDL_GetTicksNS())-zTime)) > 1E9) {                    // more than one second
+            std::cout << "\rLoop Time(mS) = " << 1E-6*dTime/loopCntr
+                                  << "      " << std::flush;
+            zTime = time;
+            loopCntr = 0;
+        }
+        ++loopCntr;
+
+        SDL_SetRenderDrawColorFloat(renderer, 0.f, 0.f, 0.f, 1.f);              // black
+        SDL_RenderClear(renderer);                                              // clear window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+        text1.render();                                                        // text1 rendered to window
+        text2.render();                                                        // text2 rendered to window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        SDL_RenderPresent(renderer);                                            // updates the screen
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event) != 0) {                                    // Event Loop
+            if (event.type == SDL_EVENT_QUIT)                                   // window was closed
+                endProgram = true;
+        }                                                                       // end of Event Loop
+    }                                                                           // end of Main Loop
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    TTF_Quit();                                                                // shut down ttf library
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    SDL_DestroyRenderer(renderer);          SDL_DestroyWindow(window);          // Shut down the library
+    SDL_Quit();
+    std::cout << std::endl;                                                     // extra CR/LF
+
+    return 0;                                                                   // program exit
+}
+</pre> </div><br/>
+
+
+
+Copy the code into your editor, save the file, compile and run:
+
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics3.png" alt="graphics window with true type text" width="500" />
+<br/><br/>
+
+
+
+
+
+### Bitmapped Text
+
+The SDL3 library does have a simpler method available for low-resolution text output - typically used for testing or for low-resource applications.  The <a href="https://wiki.libsdl.org/SDL3/SDL_RenderDebugText" style="color: blue">Debug Text</a> output uses a fixed 8x8 pixel bitmapped font that's rendered directly - it's not fancy, but has a very small memory and processing footprint, and doesn't need a TrueType font file.  It only renders ASCII, and different sizes are only available by scaling the rendering output.  
+
+
+Down in the Main Loop, two new variables <code>scaleX</code> and <code>scaleY</code> are declared which will be used to set the font scaling and normalize the pixel x,y position so the position can be specified in window pixel coordinates - not really necessary, but makes the code easier to read and maintain.
+
+ 
+Since the font is so small it will usually need to be scaled up in size to make it more readable - in this case we asymetrically scale it up by 2x horizontally and 3x vertically to make it a bit better looking on rectangular aspect ratio displays.  The <code>SDL_SetRenderScale()</code> function changes the scaling of all output from the rendering engine <code>renderer</code>, so it's changed back to 1:1 after the text is drawn, so as not to distort the next set of rendering.
+ 
+The <code>SDL_RenderDebugText()</code> function outputs the text string at pre-scaled x,y coordinates - since the output is scaled by the renderer, we pre-adjust the position down by the scale factors so it ends up where we want it when using window pixel coordinates:
+<br/><br/>
+
+
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+    while (!endProgram) {                                                      // Main Loop
+        SDL_Delay(50);                                                         // sleep for 50mS
+        
+        if ((dTime=((time=SDL_GetTicksNS())-zTime)) > 1E9) {                   // more than one second
+            std::cout << "\rLoop Time(mS) = " << 1E-6*dTime/loopCntr
+                                  << "      " << std::flush;
+            zTime = time;
+            loopCntr = 0;
+        }
+        ++loopCntr;
+        
+        SDL_SetRenderDrawColorFloat(renderer, 0.f, 0.f, 0.f, 1.f);             // black
+        SDL_RenderClear(renderer);                                             // clear window to draw color
+        text1.render();                                                        // text1 rendered to window
+        text2.render();                                                        // text2 rendered to window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+        float scaleX= 2.f, scaleY=3.f;                                         // debug text 8x8 with 2x3 scale
+        SDL_SetRenderScale(renderer, scaleX, scaleY);
+
+        SDL_SetRenderDrawColor(renderer, 80, 255, 5, 255);                     // green'ish
+        SDL_RenderDebugText(renderer, 40.f/scaleX, 200.f/scaleY,               // output text to display
+                                "Debug Text 8x8 at 2x3 scale");
+        SDL_SetRenderScale(renderer, 1.f, 1.f);                                // restore scale to 1x
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        SDL_RenderPresent(renderer);                                           // updates the screen
+        
+        SDL_Event event;
+        while (SDL_PollEvent(&event) != 0) {                                   // Event Loop
+            if (event.type == SDL_EVENT_QUIT)                                  // window was closed
+                endProgram = true;
+        }                                                                      // end of Event Loop
+    }                                                                          // end of Main Loop
+
+    TTF_Quit();
+    SDL_DestroyRenderer(renderer);          SDL_DestroyWindow(window);         // Shut down the library
+    SDL_Quit();
+    std::cout << std::endl;                                                    // extra CR/LF
+    return 0;                                                                  // program exit
+}
+</pre> </div><br/>
+
+
+
+Add the code to your Main Loop, save the file, compile and run:
+
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics4.png" alt="graphics window with true type text and debug text" width="500" />
+<br/><br/>
+
+
+
+
+
+### A Simple Button Class
+
+If you've followed along with the SDL3 articles, we now have all the pieces needed to create a class to add buttons to your projects.  We'll create the simplest functional form we can, but it's easy to extend and enhace.
+
+Add the following two new classes above the <code>main()</code> function, but below the <code>textTTF</code> class - that's actually important, because we're going to use the text class for the button, and if it's not below it, the compiler won't have seen it already and will give an 'undefined type' error.
+
+The first class added, <code>box</code>, is a simple filled rectangle, that uses library <code>SDL_FRect</code> and <code>SDL_Color</code> structures to hold the position, size and color that are passed into the constructor along with the renderer <code>Renderer</code> to be used to draw the box.
+
+The two additional boolean parameters <code>centerx</code> and <code>centery</code> determine whether the x,y position specified in <code>XYWH</code> is 
+shifted by half the width and/or height so that it ends up centered on the x,y position passed into the constructor as <code>xywh</code>, or whether it is referenced to the left and top edge.
+ 
+Only one method is defined to  <code>render()</code> the <code>box</code>.
+  
+The <code>simpleButton</code> class makes a button out of two boxes and a text object in it's constructor.  The border box <code>bbox</code> and face box <code>fbox</code> are created using the <code>xywh</code> parameter, along with their <code>bordercolor</code> and <code>facecolor</code>, with each centered vertically.
+
+The face box is then 'shrunk' around the edge by the number of pixels in the <code>thickness</code> parameter by reducing the box height by double the thickness and shifting the box down and to the right by the thickness, leaving a smaller face colored box centered in a border colored box.
+
+The button's <code>textTTF</code> object <code>label</code> is then created, using the <code>font</code>, scaled by  <code>scale</code> in the <code>textcolor</code>.  The text will be rendered centered, with the center point moved to the center of the <code>xywh</code> rectangle.
+
+All that's needed to draw the button is to call the <code>render()</code> method, which in turn renders each of the button's boxes and the label text.  A destructor is also provided for the class so that the memory allocated on the heap for it's box and text obects can be released if the button is no longer needed.
+
+
+
+<br/>
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+class box {                                                                    // simple filled box
+public:
+    SDL_Renderer *Renderer;
+    SDL_FRect XYWH;                                                            // x,y,w,h
+    SDL_Color Color;
+    
+    box(SDL_Renderer *renderer, SDL_FRect xywh, SDL_Color color,               // constructor
+                                   bool centerx, bool centery) {
+        Renderer = renderer;    XYWH = xywh;    Color = color;
+        if (centerx) XYWH.x -= XYWH.w / 2;                                     // centered in X
+        if (centery) XYWH.y -= XYWH.h / 2;                                     // centered in Y
+    }
+
+    void render() {
+        SDL_SetRenderDrawColor(Renderer, Color.r, Color.g, Color.b, Color.a);
+        SDL_RenderFillRect(Renderer, &XYWH);
+    }
+};
+
+class simpleButton {                                                           // simple button class
+public:
+    box *fbox, *bbox;                                                          // face and border boxes
+    textTTF* label;                                                            // button label
+
+    simpleButton(SDL_Renderer *renderer, SDL_FRect xywh, uint thickness,       // constructor
+                             SDL_Color facecolor, SDL_Color bordercolor,
+                             TTF_Font* font, float scale, SDL_Color textcolor,
+                             char* bstr) {
+
+        bbox = new box(renderer, xywh, bordercolor, false, true);              // box for border - Y centered
+        fbox = new box(renderer, xywh, facecolor, false, true);                // box for face - Y centered
+	
+        fbox->XYWH.w -= (2.f*thickness);     fbox->XYWH.h -= (2.f*thickness);  // border moves in
+        fbox->XYWH.x += thickness;           fbox->XYWH.y += thickness;        // to face area
+
+        label = new textTTF(renderer, font, {xywh.x+0.5f*xywh.w, xywh.y},      // text object
+                                       scale, true, textcolor, bstr);          // centered in button width
+    }
+
+    void render() {
+        bbox->render();    fbox->render();    label->render();
+    }
+    
+    ~simpleButton() {
+        delete label;       delete bbox;       delete fbox;
+    }
+};
+
+
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+int main(int argc, char *argv[]) {                                             // program entry point
+    
+    if (!SDL_Init(SDL_INIT_VIDEO)) {                                           // Initialize the library
+        std::cout &lt;&lt; "SDL Initialization Fail\n";
+        return 1;                                                              // program exit
+    }
+</pre> </div><br/>
+
+
+
+
+Now all that's needed is a declaration of <code>button1</code> using the new button class <code>simpleButton</code> before starting the Main Loop:
+
+
+
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+    if (!TTF_Init()) {                                                         // initialize font library
+       	std::cout << "SDL TTF Initialization Fail\n";
+        return 1;                                                              // program exit
+    }
+                                                                               // load font from file
+    TTF_Font* fontMedium = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30.f);
+    if (!fontMedium)
+        std::cout << "Open Font Failed - DejaVu Sans\n";
+
+    textTTF text1(renderer, fontMedium, {40.f, 95.f}, 1.f, false,              // constructor
+                      {255, 255, 255, 255}, (char*) "DejaVu Sans font 30p text1");
+    textTTF text2(renderer, fontMedium, {40.f, 150.f}, 1.7f, false,            // constructor
+                      {255, 255, 255, 255}, (char*) "2nd DejaVu Sans text2");
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+    simpleButton button1(renderer, {40.f, 300.f, 175.f, 31.f}, 4,              // constructor
+                           {7, 244, 240, 255}, {200, 200, 200, 255},
+                           fontMedium, 0.8f, {0, 0, 0, 255}, (char*)"ButtonText");
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    bool endProgram = false;
+    uint64_t time=0, zTime=0, dTime=0, loopCntr=1;
+    
+    while (!endProgram) {                                                      // Main Loop
+</pre> </div><br/>
+
+
+
+And in the Main Loop, draw the new button with it's <code>render()</code> method:
+
+
+
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+        float scaleX= 2.f, scaleY=3.f;                                         // debug text 8x8 with 2x3 scale
+        SDL_SetRenderDrawColor(renderer, 80, 255, 5, 255);                     // green'ish
+        SDL_SetRenderScale(renderer, scaleX, scaleY);
+        SDL_RenderDebugText(renderer, 40.f/scaleX, 200.f/scaleY, "Debug Text 8x8 at 2x3 scale");
+        SDL_SetRenderScale(renderer, 1.f, 1.f);                                // restore scale to 1x
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+        button1.render();                                                      // button1 rendeed to window
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+        SDL_RenderPresent(renderer);                                           // updates the screen
+        
+        SDL_Event event;
+        while (SDL_PollEvent(&event) != 0) {                                   // Event Loop
+            if (event.type == SDL_EVENT_QUIT)                                  // window was closed
+                endProgram = true;
+        }                                                                      // end of Event Loop
+    }                                                                          // end of Main Loop
+</pre> </div><br/>
+
+
+
+Save the file, compile and run:
+
+
+<br/>
+<img src="/assets/blogImages/2026-01-06/SDL3-TextBasics5.png" alt="graphics window with true type text debug text and a button" width="500" />
+<br/><br/>
+
+
+
+### Full Example Code With a Click
+
+
+To make the button functional, it needs to detect when it's been clicked on with the mouse - below is a full copy of the example from above with two additional changes shown in blue to make the code responsive to a mouse click.
+
+Add the <code>overXY()</code> function to the <code>simpleButton</code> class - it checks if the <code>SDL_FPoint</code> passed in is contained on or within the  border rectangle <code>bbox->XYWH</code> using the library function <code>SDL_PointInRectFloat</code>.
+
+Then modify the event loop using a piece of the code from the article on <a href="{% post_url 2026-01-05-Rpi-C++-SDL3-Event-Basics %}" style="color: blue">SDL3 Events</a> to check for mouse click events.  When the mouse is clicked somewhere in the window, it uses the new <code>overXY</code> method to see if the mouse x,y position is over <code>button1</code> - in this case we simply print out the event.
+
+
+
+
+<div class="shadowbox"> <pre style="font-size: 12px; font-family: monospace;">
+#include &lt;iostream&gt;
+#include &lt;SDL3/SDL.h&gt;
+#include &lt;SDL3_ttf/SDL_ttf.h&gt;
+// compile with:   g++ SDL3-textBasics.cpp -oSDL3-textBasics -lSDL3 -lSDL3_ttf -Wall
+
+class textTTF {                                                                // True Type Font text
+public:                                                                        // class for rendering
+    SDL_Renderer *Renderer;
+    SDL_Texture* Texture;
+    SDL_FRect textXYWH;                                                        // display output x,y,w,h
+
+    textTTF (SDL_Renderer *renderer, TTF_Font* font, SDL_FPoint xy,            // constructor
+                          float scale, bool centeredX, SDL_Color color,
+                          char* tstr) {
+        Renderer = renderer;    Texture = NULL;
+
+        SDL_Surface* surface;
+        if ((surface = TTF_RenderText_Blended(font, tstr, 0, color))) {        // creates surface with text
+            if ((Texture = SDL_CreateTextureFromSurface(renderer, surface))) { // create texture from surface
+                SDL_GetTextureSize(Texture, &textXYWH.w, &textXYWH.h);         // size returned in w,h
+                textXYWH.w *= scale;       textXYWH.h *= scale;                // scale the output
+                textXYWH.y = xy.y - textXYWH.h/2.f;                            // shift by half of height
+                if (centeredX) textXYWH.x = xy.x - (textXYWH.w / 2.f);         // shift by half of width
+                else textXYWH.x = xy.x;
+            }
+            SDL_DestroySurface(surface);                                       // don't need anymore
+        }
+    }
+   
+    void render () {                                                           // render texture method
+        SDL_RenderTexture(Renderer, Texture, NULL, &textXYWH);
+    }
+
+    ~textTTF () {                                                              // object destructor
+        if (Texture != NULL) SDL_DestroyTexture(Texture);
+    }
+};
+
+class box {                                                                    // simple filled box
+public:
+    SDL_Renderer *Renderer;
+    SDL_FRect XYWH;                                                            // x,y,w,h
+    SDL_Color Color;
+    
+    box(SDL_Renderer *renderer, SDL_FRect xywh, SDL_Color color,               // constructor
+                                   bool centerx, bool centery) {
+        Renderer = renderer;    XYWH = xywh;    Color = color;
+        if (centerx) XYWH.x -= XYWH.w / 2;                                     // centered in X
+        if (centery) XYWH.y -= XYWH.h / 2;                                     // centered in Y
+    }
+
+    void render() {
+        SDL_SetRenderDrawColor(Renderer, Color.r, Color.g, Color.b, Color.a);
+        SDL_RenderFillRect(Renderer, &XYWH);
+    }
+};
+
+class simpleButton {                                                           // simple button class
+public:
+    box *fbox, *bbox;                                                          // face and border boxes
+    textTTF* label;                                                            // button label
+
+    simpleButton(SDL_Renderer *renderer, SDL_FRect xywh, uint thickness,       // constructor
+                             SDL_Color facecolor, SDL_Color bordercolor,
+                             TTF_Font* font, float scale, SDL_Color textcolor,
+                             char* bstr) {
+
+        bbox = new box(renderer, xywh, bordercolor, false, true);              // box for border - Y centered
+        fbox = new box(renderer, xywh, facecolor, false, true);                // box for face - Y centered
+	
+        fbox->XYWH.w -= (2.f*thickness);     fbox->XYWH.h -= (2.f*thickness);  // border moves in
+        fbox->XYWH.x += thickness;           fbox->XYWH.y += thickness;        // to face area
+
+        label = new textTTF(renderer, font, {xywh.x+0.5f*xywh.w, xywh.y},      // text object
+                                       scale, true, textcolor, bstr);          // centered in button width
+    }
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;">
+    bool overXY(SDL_FPoint xy) {
+        return SDL_PointInRectFloat(&xy, &bbox->XYWH);
+    }
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">
+    void render() {
+        bbox->render();    fbox->render();    label->render();
+    }
+    
+    ~simpleButton() {
+        delete label;       delete bbox;       delete fbox;
+    }
+};
+
+int main(int argc, char *argv[]) {                                              // program entry point
+    std::cout &lt;&lt; "SDL3 Library Version " &lt;&lt;                                     // Print out the library version
+                        SDL_VERSIONNUM_MAJOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MINOR(SDL_GetVersion()) &lt;&lt; "." &lt;&lt;
+                        SDL_VERSIONNUM_MICRO(SDL_GetVersion()) &lt;&lt;
+                        std::endl;
+
+    SDL_Window *window = NULL;              SDL_Renderer *renderer = NULL;      // Window and Renderer Pointers
+    TTF_Font *fontMedium = NULL;                                                // Font pointer
+    if (!SDL_Init(SDL_INIT_VIDEO) ||                                            // Initialize the SDL3 library
+          !SDL_CreateWindowAndRenderer("SDL3 Text and Object Basics",           // Create Window with Renderer
+                               1000, 400, 0, &window, &renderer) ||
+          !TTF_Init() ||                                                        // initialize font library and open font
+          (((fontMedium = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30.f)) == NULL))) {
+
+        std::cout << "SDL3 Error: " << SDL_GetError() << std::endl;
+        return 1;                                                               // program exit
+    }
+
+    textTTF text1(renderer, fontMedium, {40.f, 95.f}, 1.f, false,              // constructor
+                      {255, 255, 255, 255}, (char*) "DejaVu Sans font 30p text1");
+    textTTF text2(renderer, fontMedium, {40.f, 150.f}, 1.7f, false,            // constructor
+                      {255, 255, 255, 255}, (char*) "2nd DejaVu Sans text2");
+
+    simpleButton button1(renderer, {40.f, 300.f, 175.f, 31.f}, 4,              // constructor
+                           {7, 244, 240, 255}, {200, 200, 200, 255},
+                           fontMedium, 0.8f, {0, 0, 0, 255}, (char*)"ButtonText");
+
+    bool endProgram = false;
+    uint64_t time=0, zTime=0, dTime=0, loopCntr=1;
+
+    while (!endProgram) {                                                       // Main Loop
+        SDL_Delay(50);                                                          // sleep for 50mS
+
+        if ((dTime=((time=SDL_GetTicksNS())-zTime)) > 1E9) {                    // more than one second
+            std::cout << "\rLoop Time(mS) = " << 1E-6*dTime/loopCntr
+                                  << "      " << std::flush;
+            zTime = time;
+            loopCntr = 0;
+        }
+        ++loopCntr;
+
+        SDL_SetRenderDrawColorFloat(renderer, 0.f, 0.f, 0.f, 1.f);              // black
+        SDL_RenderClear(renderer);                                              // clear window
+
+        text1.render();                                                        // text1 rendered to window
+        text2.render();                                                        // text2 rendered to window
+
+        float scaleX= 2.f, scaleY=3.f;                                         // debug text 8x8 with 2x3 scale
+        SDL_SetRenderScale(renderer, scaleX, scaleY);
+
+        SDL_SetRenderDrawColor(renderer, 80, 255, 5, 255);                     // green'ish
+        SDL_RenderDebugText(renderer, 40.f/scaleX, 200.f/scaleY,               // output text to display
+                                "Debug Text 8x8 at 2x3 scale");
+        SDL_SetRenderScale(renderer, 1.f, 1.f);   
+
+        button1.render();                                                      // button1 rendeed to window
+
+        SDL_RenderPresent(renderer);                                            // updates the screen
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event) != 0) {                                    // Event Loop
+            if (event.type == SDL_EVENT_QUIT)                                   // window was closed
+                endProgram = true;
+</pre><pre style="font-size: 12px; font-family: monospace; color: #04b3d6;"> 
+            else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {              // mouse button pressed
+                if (button1.overXY({event.button.x, event.button.y}))
+                    std::cout << "button1 Clicked" << std::endl;
+            }
+</pre><pre style="font-size: 12px; font-family: monospace; color: #000000;">        }                                                                       // end of Event Loop
+    }                                                                           // end of Main Loop
+
+    TTF_Quit();                                                                // shut down ttf library
+
+    SDL_DestroyRenderer(renderer);          SDL_DestroyWindow(window);          // Shut down the library
+    SDL_Quit();
+    std::cout << std::endl;                                                     // extra CR/LF
+
+    return 0;                                                                   // program exit
+}
+</pre> </div><br/>
+
+
+<br/><br/>
+Other articles in this series on using the SDL3 Library include using the library's drawing primitives in <a href="{% post_url 2026-01-04-Rpi-C++-SDL3-Drawing-Primitives %}" style="color: blue">C++ SDL3 2D Drawing Primitives</a> and showing how to handle user interaction with your program in <a href="{% post_url 2026-01-05-Rpi-C++-SDL3-Event-Basics %}" style="color: blue">C++ SDL3 Event Basics</a>.
+<br/><br/>
+
+
+
+
+

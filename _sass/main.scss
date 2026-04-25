@@ -1,0 +1,98 @@
+/* global font */
+body {
+font-family: "helvetica";
+}
+
+/* set the links to white with no underline */
+a:link {
+	color: #000000;
+	text-decoration: none;
+}
+a:visited {
+	color: #000000;
+	text-decoration: none;
+}
+a:hover {
+	color: #000000;
+	text-decoration: none;
+}
+a:active {
+	color: #000000;
+	text-decoration: none;
+}
+
+code {
+	color: #04b3d6;
+	font-size: 14px;
+}
+body {
+	background-color: #ffffff;
+}
+nav {
+	color: #ffffff;
+	background-color: #112855;
+	padding: 1px 10px 15px 15px;
+}
+
+h1 {
+	font-weight: 500;
+}
+h2 {
+	font-weight: 500;
+}
+h3 {
+	font-weight: 600;
+}
+h4 {
+	font-weight: 600;
+}
+h5 {
+	font-weight: 600;
+}
+
+.gradientshadowbox {
+	width: 500px;
+	border: 1px solid #333333;
+	box-shadow: 8px 8px 5px #444444;
+	padding: 8px 12px;
+	background-image: linear-gradient(180deg, white, #dddddd 40%, #cccccc);
+}
+
+.current {
+	color: white;
+}
+.shadowbox {
+	width: 95%;
+	overflow: hidden;
+	border: 2px solid #333333;
+	padding: 8px 12px;
+	background-color: #f0f0f0;
+}
+.flexbox100 {
+	width: 100%;
+	column-gap: 3px;
+	display: flex;
+	justify-content: space-between;
+	background-color: #ffffff;
+}
+
+.plainbox350 {
+	width: 350px;
+	height: 400px;
+	overflow: hidden;
+	border: 2px solid #333333;
+	padding: 8px 8px;
+	border-radius: 5px;
+	background-color: #fcfcfc;
+}
+.monoHighlight {
+	font-size: 12px;
+	font-family: monospace;
+	color: #04b3d6;
+}
+.monoBackground {
+	font-size: 12px;
+	font-family: monospace;
+	color: #000000;
+}
+
